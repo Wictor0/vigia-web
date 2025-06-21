@@ -262,3 +262,49 @@ html, body, #root {
   padding: 5px 10px;
   cursor: pointer;
 }
+/* ========================================= */
+/* ESTILOS PARA NOTIFICAÇÃO CUSTOMIZADA      */
+/* ========================================= */
+
+.custom-notification {
+  /* Posicionamento fixo no canto da tela */
+  position: fixed;
+  top: 15px;
+  right: 15px;
+
+  /* Aparência */
+  background-color: #28a745; /* Um verde de sucesso */
+  color: white;
+  padding: 15px 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  
+  /* Garante que fique acima de outros elementos, inclusive do overlay do modal */
+  z-index: 9999; 
+  
+  /* Animação */
+  animation: slideIn 0.4s ease-out;
+  font-weight: bold;
+}
+
+/* Animação de entrada da notificação */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes slideOut {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
