@@ -80,14 +80,14 @@ O Vigia é um aplicativo mobile para envio de denúncias com geolocalização no
 ## Instalação ⬇️
 
 ```bash
-- git clone https://github.com/gabygraciano/app-denuncias.git
-cd app-denuncias
+- git clone https://github.com/Wictor0/vigia-web.git
+cd projeto-hacka
 - npm install
 ```
 
 ## Rodando o projeto 🏃
 ```bash
-- npx expo start
+- npm run dev
 ```
 
 ```bash
