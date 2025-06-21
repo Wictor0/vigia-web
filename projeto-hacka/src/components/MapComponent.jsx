@@ -1,83 +1,166 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   GoogleMap,
-  LoadScript,
   Marker,
-  InfoWindow,
+  LoadScript,
+  StandaloneSearchBox,
+  DirectionsService,
+  DirectionsRenderer,
 } from '@react-google-maps/api';
+import './MapComponent.css'; // Vamos criar este CSS a seguir
 
-// A chave agora é lida de forma segura das variáveis de ambiente.
-// O React substitui esta variável pelo valor do seu arquivo .env durante a compilação.
-const REACT_APP_GOOGLE_API_KEY = process.env.REACT_APP_GOOGLE_API_KEY;
+// Coloque sua chave da API do Google Maps aqui
+const REACT_APP_GOOGLE_API_KEY = "AIzaSyD9fMVdU3kMGvNI8pb1nX5Z5PkI4trfVQo"; 
+const libraries = ["places"];
 
-const MapComponent = ({ alerts, flyToPosition }) => {
+const MapComponent = () => {
+  // Estados para o mapa e as caixas de busca
   const [map, setMap] = useState(null);
-  const [activeMarker, setActiveMarker] = useState(null);
+  const [searchBoxA, setSearchBoxA] = useState(null);
+  const [searchBoxB, setSearchBoxB] = useState(null);
 
-  // Coordenadas iniciais do mapa (centro de Brasília)
-  const mapCenter = {
-    lat: -15.793889,
-    lng: -47.882778,
+  // Estados para os pontos de origem e destino
+  const [pointA, setPointA] = useState(null);
+  const [pointB, setPointB] = useState(null);
+
+  // Estados para o serviço de direções
+  const [origin, setOrigin] = useState(null);
+  const [destination, setDestination] = useState(null);
+  const [response, setResponse] = useState(null);
+
+  // Posição inicial do mapa (ex: centro de Florianópolis)
+  const initialPosition = {
+    lat: -15.7801,
+    lng: -47.9292,
   };
 
-  // Efeito que "voa" para a posição do marcador
-  useEffect(() => {
-    if (map && flyToPosition) {
-      const [lat, lng] = flyToPosition;
-      map.panTo({ lat, lng });
-      map.setZoom(16);
+  // Funções de carregamento para as caixas de busca
+  const onLoadA = (ref) => setSearchBoxA(ref);
+  const onLoadB = (ref) => setSearchBoxB(ref);
+
+  // Função chamada quando um local é selecionado na primeira caixa
+  const onPlacesChangedA = () => {
+    const places = searchBoxA.getPlaces();
+    const place = places[0];
+    const location = {
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng(),
+    };
+    setPointA(location);
+    setOrigin(null);
+    setDestination(null);
+    setResponse(null); // Limpa a rota anterior
+    map.panTo(location);
+  };
+
+  // Função chamada quando um local é selecionado na segunda caixa
+  const onPlacesChangedB = () => {
+    const places = searchBoxB.getPlaces();
+    const place = places[0];
+    const location = {
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng(),
+    };
+    setPointB(location);
+    setOrigin(null);
+    setDestination(null);
+    setResponse(null); // Limpa a rota anterior
+    map.panTo(location);
+  };
+
+  // Função do botão "Traçar rota"
+  const traceRoute = () => {
+    if (pointA && pointB) {
+      setOrigin(pointA);
+      setDestination(pointB);
     }
-  }, [flyToPosition, map]);
-
-  const handleMarkerClick = (markerId) => {
-    setActiveMarker(markerId);
   };
 
-  // Se a chave da API não for encontrada, mostra uma mensagem de erro em vez do mapa.
-  if (!REACT_APP_GOOGLE_API_KEY) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center', color: 'red' }}>
-        Erro: A Chave da API do Google Maps não foi configurada.
-        Por favor, configure o arquivo .env com a variável REACT_APP_GOOGLE_API_KEY.
-      </div>
-    );
-  }
+  // Memoiza as opções para o serviço de direções
+  const directionsServiceOptions = useMemo(() => {
+    if (!origin || !destination) {
+      return null;
+    }
+    return {
+      origin,
+      destination,
+      travelMode: "DRIVING",
+    };
+  }, [origin, destination]);
+
+  // Callback para receber a resposta do serviço de direções
+  const directionsCallback = useCallback((res) => {
+    if (res !== null) {
+      if (res.status === "OK") {
+        setResponse(res);
+      } else {
+        console.log("Erro na resposta de direções: ", res);
+        alert("Não foi possível traçar a rota. Verifique os endereços.");
+      }
+    }
+  }, []);
+
+  // Memoiza as opções para o renderizador de direções
+  const directionsRendererOptions = useMemo(() => {
+    return {
+      directions: response,
+    };
+  }, [response]);
 
   return (
-    <LoadScript
-      googleMapsApiKey={REACT_APP_GOOGLE_API_KEY}
-    >
-      <GoogleMap
-        onLoad={setMap}
-        mapContainerStyle={{ width: "100%", height: "100%", borderRadius: '10px' }}
-        center={mapCenter}
-        zoom={12}
-        options={{
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false,
-        }}
+    <div className="map-page-container">
+      <LoadScript
+        googleMapsApiKey={REACT_APP_GOOGLE_API_KEY}
+        libraries={libraries}
       >
-        {alerts.map((alert) => (
-          (alert.latitude && alert.longitude) && (
-            <Marker
-              key={alert.id}
-              position={{ lat: alert.latitude, lng: alert.longitude }}
-              onClick={() => handleMarkerClick(alert.id)}
+        <GoogleMap
+          onLoad={setMap}
+          mapContainerClassName="map-container"
+          center={initialPosition}
+          zoom={15}
+        >
+          <div className="address-box">
+            <StandaloneSearchBox
+              onLoad={onLoadA}
+              onPlacesChanged={onPlacesChangedA}
             >
-              {activeMarker === alert.id && (
-                <InfoWindow onCloseClick={() => setActiveMarker(null)}>
-                  <div>
-                    <h4>{alert.tipo}</h4>
-                    <p>{alert.descricao}</p>
-                  </div>
-                </InfoWindow>
-              )}
-            </Marker>
-          )
-        ))}
-      </GoogleMap>
-    </LoadScript>
+              <input
+                className="address-field"
+                placeholder="Digite o endereço de partida"
+              />
+            </StandaloneSearchBox>
+            <StandaloneSearchBox
+              onLoad={onLoadB}
+              onPlacesChanged={onPlacesChangedB}
+            >
+              <input
+                className="address-field"
+                placeholder="Digite o endereço de destino"
+              />
+            </StandaloneSearchBox>
+            <button onClick={traceRoute} className="route-button">
+              Traçar Rota
+            </button>
+          </div>
+
+          {/* Mostra os marcadores apenas se a rota não estiver traçada */}
+          {!response && pointA && <Marker position={pointA} />}
+          {!response && pointB && <Marker position={pointB} />}
+
+          {/* Renderiza o serviço e a rota quando a origem e o destino são definidos */}
+          {directionsServiceOptions && (
+            <DirectionsService
+              options={directionsServiceOptions}
+              callback={directionsCallback}
+            />
+          )}
+
+          {response && (
+            <DirectionsRenderer options={directionsRendererOptions} />
+          )}
+        </GoogleMap>
+      </LoadScript>
+    </div>
   );
 };
 
